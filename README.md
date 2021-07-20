@@ -1,6 +1,6 @@
 # Base2_Log
 This repository contains  
-* the script that automatically generates the verilog file of a AXI4 lite compliat base2 logarithm
+* the script that automatically generates the verilog file of a AXI4 lite compliant base2 logarithm
 * output verilog file
 * notebook with some tests  
 
