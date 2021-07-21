@@ -1169,17 +1169,17 @@ module LOG_LUT
             16'd1021: LUT_output_2 <= 16'd1022;
             16'd1022: LUT_output_2 <= 16'd1023;
             16'd1023: LUT_output_2 <= 16'd1023;
-        endcase
-        if (prienc == 6'b000000) begin
-            data_out_1  <= 16'd0;
+            endcase
+            if (prienc == 6'b000000) begin
+                data_out_1  <= 16'd0;
+            end
+            else begin
+                data_out_1  <= prienc<<10;
+            end
+            data_out_2  <= data_out_1;
+            data_out_3  <= data_out_2 + (LUT_output_2);
         end
-        else begin
-            data_out_1  <= prienc<<10;
-        end
-        data_out_2  <= data_out_1;
-        data_out_3  <= data_out_2 + (LUT_output_2);
     end
-    
     assign m_axis_dout_tdata    = data_out_3;
     assign m_axis_dout_tlast    = tlast_3;
     assign m_axis_dout_tuser    = tuser_3;
