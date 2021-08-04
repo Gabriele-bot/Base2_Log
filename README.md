@@ -12,9 +12,9 @@ The repository is organized as follows:
 In the future the PYNQ project will be added, in which some random inputs will be sent to the PL via a DMA, then the log will be computed and the result array will be sent back (via DMA again) and the error will be evaluated.  
 
 <center>
-    <img src="plots/LUT_LOG_out.png" alt="Drawing" style="width: 500px"/>
+    <img src="report/Images/PYNQ_LUT_res.png" alt="Drawing" style="width: 500px"/>
 </center>
 
 <center>
-    <img src="plots/TE_LOG_out.png" alt="Drawing" style="width: 500px"/>
+    <img src="report/Images/PYNQ_TE_res.png" alt="Drawing" style="width: 500px"/>
 </center>
