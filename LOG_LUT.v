@@ -58,7 +58,7 @@ module LOG_LUT
     reg [15:0] tuser_2    = 16'b0;
     reg [15:0] tuser_3    = 16'b0;
     
-    reg tready    = 1'b0;
+    //reg tready    = 1'b0;
     
     reg [5:0] prienc;
     
@@ -83,7 +83,7 @@ module LOG_LUT
             case(state_Next)
             available: begin
                 
-                tready <= 1'b1;
+                //tready <= 1'b1;
                 
                   //priority encoder
                 if      (s_axis_din_tdata [63]==1'b1)   prienc <=	6'd63;    // Highest Priority
@@ -1207,12 +1207,12 @@ module LOG_LUT
                 end
                 busy: begin
                 
-                tready <= 1'b0;
+                //tready <= 1'b0;
                 
                 end
                 default: begin
                 
-                tready <= 1'b0;
+                //tready <= 1'b0;
                 
                 end
             endcase
@@ -1250,6 +1250,6 @@ module LOG_LUT
     assign m_axis_dout_tuser    = tuser_3;
     assign m_axis_dout_tvalid   = tvalid_3;
     
-    assign s_axis_din_tready    = tready;
+    assign s_axis_din_tready    = m_axis_dout_tready;
     
 endmodule

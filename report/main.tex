@@ -92,7 +92,7 @@ Given an integer input $x$ (from $0$ to $2^{64}-1$), this method follows three s
 \begin{itemize}
     \item find the MSB position of $x$ with a priority encoder ($PE_{out}$) 
     \item compute the 'rest' ($r$)
-    \item rest is converted to the fraction part of the logarithm with a look-up table (LUT) 
+    \item rest is converted to the fractional part of the logarithm with a look-up table (LUT) 
 \end{itemize}
 Once the fractional width is selected the LUT output can be computed; greater the fractional width grater the precision of the results, but higher will be the resources requirement.  
 
@@ -153,7 +153,7 @@ y <= (prienc<<F_W) + frac;
 \end{lstlisting}
 
 \subsection{Taylor expansion}
-This method follow the same first step of the previous one, but the fractional part is computed with a Taylor expansion.
+This method follow the same first step of the previous one, but the fractional part is computed with a Taylor expansion centered in $1$.
 \begin{equation} 
 \begin{split}
 \log_2(x) & = \log_2\left(\frac{x \cdot 2^{PE_{out}}}{2^{PE_{out}}}\right) \\
@@ -169,7 +169,8 @@ Where $r$ is
 
 Now the second logarithm is computed with the following expansion.
 \begin{equation}
-    \log_2\left(1+r\right)=\frac{1}{\ln(2)}\left(r-\frac{r^2}{2}+\frac{r^3}{3}+ \cdot \cdot \cdot \right) 
+    \label{eq:log_rest}
+    \log_2\left(1+r\right)=\frac{1}{\ln(2)}\left(r-\frac{r^2}{2}+\frac{r^3}{3}+ \cdot \cdot \cdot \right)
 \end{equation}
 
 \begin{lstlisting}[style={verilog-style}]
@@ -194,8 +195,32 @@ y_4  <= y_3 + III_order_3[2*F_W-1:F_W]*i_ln2_3;
 \end{lstlisting}
 
 
-Each correction order implies the introduction of two DSPs (multipliers) and they are limited in number, for example in the PYNQ-Z2 board (Zynq7020) 120 of them are present. 
-\section{Hardware utilization}
+Each correction order implies the introduction of two DSPs (multipliers) and they are limited in number, for example in the PYNQ-Z2 board (Zynq7020) 120 of them are present.
+
+\subsection{Polyfit}
+This method has the same structure of the Taylor expasion, but it differs on the coefficients selection. A polynomial function is fitted to the function in \eqref{eq:log_rest} with the constant bound to zero.  
+
+The following table summarizes the coefficients found from I to IV order polynomial.
+\begin{table}[h]
+\begin{tabular}{c|cccc|cccc}
+&\multicolumn{4}{c|}{Value}  &\multicolumn{4}{c}{11\_fix\_10 format}         \\ \hline 
+Order   & a     & b      & c        & d     & a     & b     & c     & d     \\ \hline
+I       & 1.082 & /      & /        & /     & 1108  & /     & /     & /     \\
+II      & 1.356 & -0.349 & /        & /     & 1389  & -375  & /     & /     \\
+III     & 1.423 & -0.587 & 0.165    & /     & 1457  & -601  & 169   & /     \\
+IV      & 1.438 & -0.678 & 0.323    & -0.084& 1473  & -694  & 331   & -86   \\
+
+\end{tabular}
+\end{table}
+
+
+As it clearly visible the methods use roughly the same amount of flip-flops and look-up tables, but the LUT method uses a BRAM block (larger the fractional width is, larger the RAM) and the expansion methods uses DSPs.  
+The first method has a fixed delay of a 3 clock cycles \footnote{LUT input evaluation, LUT output and adder}, instead the expansion methods produce a delay related to the order correction \footnote{rest evaluation and one clock cycle per order correction}.
+
+
+\section{PYNQ-Z2 Deploying}
+
+\subsection{Hardware utilization}
 It will be utilized a PYNQ-Z2 board for testing purposes. A DMA will be employed to transfer the data from the PS (Processing System) to the PL (Programmable Logic) and viceversa. The PL log result will be compared with the numpy PS result.  
 
 In this example a 64 bits integer input will be fed in to the two module, the result is in fixed point format with 10 fractional bits (16\_fix\_10).
@@ -206,21 +231,17 @@ In this example a 64 bits integer input will be fed in to the two module, the re
 Method           & FF  & LUT & BRAM & DSP & Delay [C.C.] \\ \hline
 Look-up table    & 122 & 208 & 0.5  & 0   & 3 \\
 Taylor expansion & 106 & 202 & 0    & 5   & 4 \\
+Polyfit(III)     & 106 & 202 & 0    & 5   & 4 \\
 
 \end{tabular}
 \end{table}
 
-As it clearly visible both methods use roughly the same amount of flip-flops and look-up tables, but the LUT method uses a BRAM block (larger the fractional width is, larger the RAM) and the expansion method uses DSPs.  
-The first method has a fixed delay of a 3 clock cycles \footnote{LUT input evaluation, LUT output and adder}, instead the second method produces a delay related to the order correction \footnote{rest evaluation and one clock cycle per order correction}.
-
-
-\section{PYNQ-Z2 Deploying}
-
 \subsection{Look-up table}
 
 In the FIG:\ref{fig:LUT_resp} is shown a 10 bits LUT response. This output is precomputed via a python script that makes use of the np.log2 and np.round numpy functions. 
+
 \begin{figure*}[h]
-    \includegraphics[width=1.0\textwidth]{Images/LUT_response.png}
+    \includegraphics[width=0.9\textwidth]{Images/LUT_response.png}
     \caption{LUT employed for the fractional part. In this example a 10 bits wide LUT is employed, its value are generated by a python script.}
     \label{fig:LUT_resp}
 \end{figure*}
@@ -280,7 +301,7 @@ The FIG:\ref{fig:LUT_Error} highlight the error distribution introduced by this 
 
 In FIG:\ref{fig:TE_resp} show the taylor expansion response in function of the input rest, it is shown the III order approximation, the average of the III order and II order and the exact response.
 \begin{figure*}[h]
-    \includegraphics[width=1.0\textwidth]{Images/TE_respnse.png}
+    \includegraphics[width=0.9\textwidth]{Images/TE_respnse.png}
     \caption{Fractional part estimation with Taylor expansion.}
     \label{fig:TE_resp}
 \end{figure*}
@@ -331,14 +352,70 @@ The error distribution in FIG:\ref{fig:TE_Error} is only negative as the III ord
     \label{fig:TE_Error}
 \end{figure*}
 
+\subsection{Polyfit}
+
+In FIG:\ref{fig:POLY_resp} show the polyfit response in function of the input rest, it is shown the I and III order approximations and the exact response.
+\begin{figure*}[h]
+    \includegraphics[width=0.9\textwidth]{Images/POLY_response.png}
+    \caption{Fractional part estimation with a polyfit.}
+    \label{fig:POLY_resp}
+\end{figure*}
+
+Similar to the previous method in FIG:\ref{fig:POLY_LOG} is shown the response of the polyfit method, note the attenuation on the steps caused by the $PE_{out}$ change with respect to the other expansion method.
+\begin{figure*}[h]
+    \begin{minipage}[c]{0.5\linewidth}
+        \vspace{0pt}
+        \centering
+        \subfloat[Expected module response]{
+            \includegraphics[height=4cm]{Images/POLY_LOG_out.png}
+            \label{fig:comp_POLY_LOG}
+        }
+    \end{minipage}%
+    \hfill%
+    \begin{minipage}[c]{0.5\linewidth}
+        \vspace{0pt}
+        \centering
+        \subfloat[Hardware implementation response]{
+            \includegraphics[height=4cm]{Images/PYNQ_POLY_res.png}
+            \label{fig:PYNQ_POLY_LOG}
+        }
+    \end{minipage}%
+    \caption{Comparisons between expected and actual "LOG POLY" module response with the exact logarithm value, in both cases $2^{20}$ random input samples are considered.}
+    \label{fig:POLY_LOG}
+\end{figure*}
+
+The error distribution in FIG:\ref{fig:POLY_Error} is an order of magnitude narrower than the Taylor expansion method.
+\begin{figure*}[h]
+    \begin{minipage}[c]{0.5\linewidth}
+        \vspace{0pt}
+        \centering
+        \subfloat[Expected module response]{
+            \includegraphics[height=4cm]{Images/POLY_LOG_error.png}
+            \label{fig:comp_POLY_LOG_err}
+        }
+    \end{minipage}%
+    \hfill%
+    \begin{minipage}[c]{0.5\linewidth}
+        \vspace{0pt}
+        \centering
+        \subfloat[Hardware implementation response]{
+            \includegraphics[height=4cm]{Images/PYNQ_POLY_LOG_error.png}
+            \label{fig:PYNQ_POLY_LOG_err}
+        }
+    \end{minipage}%
+    \caption{Error distributions.}
+    \label{fig:POLY_Error}
+\end{figure*}
+
 \subsection{Execution time}
 
-Here a simple test is produced to evaluate the time performance of the modules.
+Here a simple test is produced to evaluate the time performance of the modules, $2^{20}$ samples are transmitted to the PL via a DMA\footnote{Direct Memory Access that writes and reads to the DDR memory, it has access from the PS and from the PL} than the stream is fed to the LOG module and sent back to the PS; the DMA is optimize for burst transfers, which explain the $2^{20}$ buffer size.
 \begin{table}[h]
 \begin{tabular}{c||ccccccc} 
 Method           & 10MHz  & 25MHz  & 50MHz & 100MHz & 166.67MHz & 200MHz & 250MHz\\ \hline
 Look-up table    & 101ns & 41ns & 21ns & 11ns & 7ns & 7ns & FAILED\\
 Taylor expansion & 101ns & 41ns & 21ns & 11ns & 7ns & 7ns & FAILED\\
+Polyfit(III) & 101ns & 41ns & 21ns & 11ns & 7ns & 7ns & FAILED\\
 \end{tabular}
 \end{table}
 
@@ -352,7 +429,10 @@ The errors introduced by the two methods are now presented.
 &\multicolumn{2}{c|}{COMPUTED}&\multicolumn{2}{c}{PYNQ implementation} \\ \hline 
 Method           & Mean error  & STD & Mean error  & STD  \\ \hline
 Look-up table    & $4.9\times 10^{-4}$ & $4.1\times 10^{-4}$  & $4.9\times 10^{-4}$ & $4.1\times 10^{-4}$ \\
+
 Taylor expansion & $-4.3\times 10^{-2}$ & $5.5\times 10^{-2}$ & $-4.3\times 10^{-2}$ & $5.6\times 10^{-2}$ \\
+
+Polyfit(III) & $1.0\times 10^{-3}$ & $6.6\times 10^{-4}$ & $1.2\times 10^{-3}$ & $7.0\times 10^{-4}$ \\
 \end{tabular}
 \end{table}
 The LUT method introduces an error two order of magnitude smaller than the taylor expansion method but it requires a script to generate the LUT output, this means that it is not possible to change its parameter in the vivado framework (input width, fractional width and so on), it also uses BRAM blocks.  
