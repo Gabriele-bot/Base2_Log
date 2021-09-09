@@ -3,7 +3,7 @@
  ## Code 
 
 The repository is organized as follows:
-- **`code_generator.py`**: script that automatically generates the verilog file of a AXI4 lite compliant base2 logarithm;
+- **`code_generator.py`**: script that automatically generates the verilog file of an AXI4-stream compliant base2 logarithm;
 - **`LUT_LOG.v`**: output verilog file;
 - **`LOG_tests.ipynb`**: notebook which contains some tests;  
 - **`PYNQ_overlays_files`**: files thal will be loaded in the PYNQ-Z2 board;
